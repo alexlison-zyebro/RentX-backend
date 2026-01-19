@@ -48,7 +48,6 @@ export const verifyOtpController = async (req, res) => {
 export const registerUser = async (req, res) => {
   try {
     const { email, phone, address, buyerDetails, sellerDetails } = req.body;
-
     const verifiedOtp = await Otps.findOne({
       email,
       isVerified: true
@@ -65,6 +64,38 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({
         message: "User already registered"
       });
+    }
+
+    if (sellerDetails?.sellerType === "INDIVIDUAL") {
+      const { individualName, individualDob, aadhaarNumber } = sellerDetails;
+
+      if (!individualName || !individualDob || !aadhaarNumber) {
+        return res.status(400).json({
+          message:
+            "Individual seller requires name, date of birth and Aadhaar number"
+        });
+      }
+    }
+
+    if (sellerDetails?.sellerType === "ORGANIZATION") {
+      const {
+        organizationName,
+        individualName,
+        individualDob,
+        aadhaarNumber
+      } = sellerDetails;
+
+      if (
+        !organizationName ||
+        !individualName ||
+        !individualDob ||
+        !aadhaarNumber
+      ) {
+        return res.status(400).json({
+          message:
+            "Organization seller requires organization name, owner name, date of birth and Aadhaar number"
+        });
+      }
     }
 
     const defaultPassword = Math.random().toString(36).slice(-8);
@@ -112,6 +143,7 @@ export const registerUser = async (req, res) => {
       : `
         <h3>Welcome to RentX</h3>
         <p>Your account has been created successfully.</p>
+         <p>Login to Your Account Using the Below Login Credentials.</p>
         <p><b>Email:</b> ${email}</p>
         <p><b>Password:</b> ${defaultPassword}</p>
         <p>Please change your password after login.</p>
