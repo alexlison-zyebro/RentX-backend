@@ -1,14 +1,25 @@
-require("dotenv").config();
-const express = require("express")
-const connectDB = require("./config/db")
+import express from "express";
+import cors from "cors";
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/auth.routes.js";
 
-const app = express()
+const app = express();
 
+// Connect DB
 connectDB();
 
-app.use(express.json())
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-app.listen(process.env.PORT || 4000,() => {
+// Routes
+app.use("/api/auth", authRoutes);
 
-    console.log("Sever Running at Port",process.env.PORT)
+app.get("/", (req, res) => {
+  res.send("RentX Backend Running");
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
