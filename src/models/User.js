@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
   role: {
     type: [String],
-    enum: ["BUYER", "SELLER","ADMIN"],
+    enum: ["BUYER", "SELLER", "ADMIN"],
     required: true
   },
 
@@ -23,7 +23,8 @@ const userSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["ACTIVE","INACTIVE", "PENDING", "APPROVED"],
+    enum: ["ACTIVE", "INACTIVE", "PENDING", "APPROVED"],
+    default: "ACTIVE"
   },
 
   address: {
@@ -43,10 +44,17 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ["INDIVIDUAL", "ORGANIZATION"]
     },
+
     individualName: String,
     individualDob: String,
-    organizationName: String,
-    organizationRegDate:String,
+
+    organizationName: {
+      type: String,
+      required: function () {
+        return this.sellerDetails?.sellerType === "ORGANIZATION";
+      }
+    },
+
     aadhaarNumber: String
   },
 
@@ -56,4 +64,4 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.model("Users", userSchema);
+export default mongoose.model("User", userSchema);
