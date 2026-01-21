@@ -2,6 +2,9 @@ import User from "../models/User.js";
 import Otps from "../models/Otp.js";
 import { generateAndSaveOtp, verifyOtp } from "../services/otp.service.js";
 import { sendMail } from "../utils/mailer.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
 
 /* SEND OTP */
 export const sendOtp = async (req, res) => {
@@ -111,11 +114,13 @@ export const registerUser = async (req, res) => {
           : ["SELLER"];
     }
 
+    const hashedPassword = await bcrypt.hash(defaultPassword,10);
+
     await User.create({
       role,
       email,
       phone,
-      password: defaultPassword,
+      password: hashedPassword,
       isEmailVerified: true,
       status,
       address,
@@ -162,5 +167,77 @@ export const registerUser = async (req, res) => {
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: "Registration failed" });
+  }
+};
+
+
+//Login
+
+export const loginUser = async (req,res) => {
+
+  try {
+
+    const { email, password } = req.body;
+
+    const user = await User.findOne({email});
+
+    if(!user)
+    {
+      return res.status(401).json({
+        status:"Invalid Email",
+        message:"Invalid email Id"
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password,user.password);
+
+    if(!isMatch)
+    {
+      return res.status(401).json({
+
+        status:"PasswordNotMatch",
+        message:"Invalid Password"
+      })
+    }
+
+     if (user.status === "INACTIVE") {
+      return res.status(403).json({
+        status: "UserInactive",
+        message: "Account is inactive"
+      });
+    }
+
+    if (user.status === "PENDING") {
+      return res.status(403).json({
+        status: "accountPendingStatus",
+        message: "Seller account pending admin approval"
+      });
+    }
+
+    const token = jwt.sign({
+      userId: user._id,
+      email: user.email,
+      roles: user.role
+    },
+    process.env.JWT_SECRET,
+    { expiresIn : "2d" }
+  
+  );
+
+  res.json({
+    status:"SUCCESS",
+    message:"Login Successfull",
+    token,
+    roles: user.role
+  });
+    
+  } catch (error) {
+    
+    console.error("Login error:", error);
+    res.status(500).json({
+      status: "FAILED",
+      message: "Login failed"
+    });
+    
   }
 };

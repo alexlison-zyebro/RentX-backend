@@ -1,25 +1,36 @@
 import jwt from "jsonwebtoken";
 
-export const verifyToken = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+export const authenticate = (req,res,next) => {
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "Access denied. Token missing"
-      });
-    }
+  const token = req.headers.token;
 
-    const token = authHeader.split(" ")[1];
+  if(!token){
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded;
-
-    next();
-  } catch (error) {
     return res.status(401).json({
-      message: "Invalid or expired token"
+      status:"InvalidAuthentication",
+      message:"Authentication token missing"
     });
   }
-};
+
+  try {
+    const decoded = jwt.verify(token,process.env.JWT_SECRET);
+
+    req.user = {
+
+      id:decoded.userId,
+      email:decoded.email,
+      roles:decoded.roles
+    };
+
+    next();
+    
+  } catch (error) {
+
+    return res.status(401).json({
+      status: "InvalidToken",
+      message:"Invalid or Expired Token"
+
+    });
+    
+  }
+}
