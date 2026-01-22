@@ -9,7 +9,8 @@ export const generateAndSaveOtp = async (email) => {
 
   await Otp.create({
     email,
-    otp, 
+    otp,
+    purpose: "REGISTER",
     expiresAt: Date.now() + 5 * 60 * 1000 
   });
 
@@ -18,13 +19,16 @@ export const generateAndSaveOtp = async (email) => {
 
 
 // Verify OTP
-export const verifyOtp = async (email, userOtp) => {
-  const record = await Otp.findOne({ email, otp: userOtp });
+export const verifyOtp = async (email, userOtp, purpose) => {
+  const record = await Otp.findOne({
+    email,
+    otp: userOtp,
+    purpose
+  });
 
   if (!record) return false;
   if (record.expiresAt < Date.now()) return false;
 
-  // mark as verified 
   record.isVerified = true;
   await record.save();
 

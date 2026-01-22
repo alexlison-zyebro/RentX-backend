@@ -33,18 +33,34 @@ export const sendOtp = async (req, res) => {
 /* VERIFY OTP */
 export const verifyOtpController = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, purpose } = req.body;
 
-    const isValid = await verifyOtp(email, otp);
-    if (!isValid) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    if (!purpose) {
+      return res.status(400).json({
+        message: "OTP purpose is required"
+      });
     }
 
-    res.json({ status: "SUCCESS", message: "OTP verified successfully" });
-  } catch {
-    res.status(500).json({ message: "OTP verification failed" });
+    const isValid = await verifyOtp(email, otp, purpose);
+
+    if (!isValid) {
+      return res.status(400).json({
+        message: "Invalid or expired OTP"
+      });
+    }
+
+    res.json({
+      status: "SUCCESS",
+      message: "OTP verified successfully"
+    });
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    res.status(500).json({
+      message: "OTP verification failed"
+    });
   }
 };
+
 
 /* REGISTER USER */
 
