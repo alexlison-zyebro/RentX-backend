@@ -3,6 +3,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import forgotRoutes from "./routes/forgot.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -17,9 +18,9 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/forgot", forgotRoutes);  
 
-app.get("/", (req, res) => {
-  res.send("RentX Backend Running");
-});
+// Admin Routes
+app.use("/api/admin",adminRoutes);
+
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
