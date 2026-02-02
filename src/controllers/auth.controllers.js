@@ -244,6 +244,7 @@ export const loginUser = async (req,res) => {
     status:"SUCCESS",
     message:"Login Successfull",
     token,
+    userId: user._id,
     roles: user.role
   });
     
