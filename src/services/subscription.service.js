@@ -1,5 +1,37 @@
 import User from "../models/User.js"
 
+export const checkSubscriptionStatusService = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return {
+                status: "userNotFound",
+                message: "User not found"
+            };
+        }
+
+        return {
+            status: "SUCCESS",
+            data: {
+                isSubscribed: user.isSubscribed, 
+                subscriptionStartDate: user.subscriptionStartDate,
+                subscriptionEndDate: user.subscriptionEndDate,
+                subscriptionPrice: user.subscriptionPrice,
+                status: user.status
+            }
+        };
+
+    } catch (error) {
+        console.error("Check subscription status service error:", error);
+        return {
+            status: "FAILED",
+            message: "Failed to check subscription status"
+        };
+    }
+}
+
+
 // Subscription Setup
 
 export const processSubscriptionService = async (userId) => {
