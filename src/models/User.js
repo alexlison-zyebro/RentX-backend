@@ -21,6 +21,23 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
+  isSubscribed: {
+    type: Boolean,
+    default: false
+  },
+
+  subscriptionStartDate: {
+    type: Date
+  },
+
+  subscriptionEndDate: {
+    type: Date
+  },
+
+  subscriptionPrice: {
+    type: Number,
+  },
+
   status: {
     type: String,
     enum: ["ACTIVE", "INACTIVE", "PENDING", "APPROVED","REJECTED"],
