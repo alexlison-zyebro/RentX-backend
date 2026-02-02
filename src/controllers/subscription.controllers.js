@@ -1,5 +1,42 @@
-import { processSubscriptionService } from "../services/subscription.service.js";
+import User from "../models/User.js";
+import { checkSubscriptionStatusService, processSubscriptionService } from "../services/subscription.service.js";
 import { sendMail } from "../utils/mailer.js";
+
+
+// Check subscription status controller
+export const checkSubscriptionStatus = async (req, res) => {
+  try {
+    const { userId } = req.body; 
+    
+    const result = await checkSubscriptionStatusService(userId);
+
+    if (result.status === "SUCCESS") {
+      return res.json({
+        status: "SUCCESS",
+        data: result.data
+      });
+    }
+
+    if (result.status === "userNotFound") {
+      return res.status(404).json({
+        status: "USER_NOT_FOUND",
+        message: result.message
+      });
+    }
+
+    res.status(400).json({
+      status: result.status,
+      message: result.message
+    });
+
+  } catch (error) {
+    console.error("Check subscription status error:", error);
+    res.status(500).json({
+      status: "FAILED",
+      message: "Failed to check subscription status"
+    });
+  }
+};
 
 // Activate subscription
 export const activateSubscription = async (req, res) => {
