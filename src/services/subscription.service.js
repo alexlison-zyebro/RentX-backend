@@ -69,7 +69,7 @@ export const processSubscriptionService = async (userId) => {
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1);
 
-        user.isSubscribed = true;
+        user.isSubscribed = "ACTIVE";
         user.subscriptionStartDate = startDate;
         user.subscriptionEndDate = endDate;
         user.status = "ACTIVE";
