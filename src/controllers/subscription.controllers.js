@@ -54,8 +54,7 @@ export const activateSubscription = async (req, res) => {
 
     if (result.status === "SUCCESS") {
       // Send confirmation email
-      const User = await import("../models/User.js");
-      const user = await User.default.findById(userId);
+      const user = await User.findById(userId);
       
       if (user) {
         await sendMail(

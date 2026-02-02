@@ -8,7 +8,7 @@ router.use(authenticate);
 
 // Subscription routes 
 router.post("/subscription/activate", activateSubscription);
-router.get("/subscription/status", checkSubscriptionStatus);
+router.post("/subscription/status", checkSubscriptionStatus);
 
 
 export default router;
