@@ -1,13 +1,6 @@
 export const isAdmin = (req, res, next) => {
   try {
-    if (!req.user || !req.user.roles) {
-      return res.status(403).json({
-        status: "AccessDenied",
-        message: "Authentication required"
-      });
-    }
-
-    const userRoles = req.user.roles;
+    const userRoles = req.user?.roles || req.user?.role || [];
     
     if (!userRoles.includes("ADMIN")) {
       return res.status(403).json({
