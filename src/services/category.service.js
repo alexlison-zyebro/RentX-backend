@@ -15,7 +15,7 @@ export const addCategoryService = async (name) => {
       
       const newCategory = await Category.create({
       name,
-      status: true,
+      isActive: true,
       createdAt: new Date()
     });
     
@@ -88,7 +88,6 @@ export const updateCategoryService = async (id, name) => {
     
     // Update category
     existingCategory.name = name;
-    existingCategory.updatedAt = new Date();
     await existingCategory.save();
     
     return {
