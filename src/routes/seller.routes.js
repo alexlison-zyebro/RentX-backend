@@ -6,7 +6,8 @@ import {
   getAllProducts,
   getProductById,
   updateProduct,
-  toggleProductAvailability
+  toggleProductAvailability,
+  getMyProducts
 } from "../controllers/product.controllers.js";
 import upload from "../config/multer.config.js";
 
@@ -24,6 +25,7 @@ router.post(
   upload.single("image"),
   addProduct
 );
+router.post("/my-products", getMyProducts); 
 router.post("/allProducts", getAllProducts); 
 router.post("/products/:id", getProductById); 
 router.put(

@@ -3,19 +3,14 @@ import {
   getAllProductsService,
   getProductByIdService,
   updateProductService,
-  toggleProductAvailabilityService
+  toggleProductAvailabilityService,
+  getMyProductsService
 } from "../services/product.service.js";
 
 // Add Product Controller
 export const addProduct = async (req, res) => {
   try {
     const userId = req.user.userId;
-
-        
-    console.log("DEBUG - Add Product Request:");
-    console.log("User ID from token:", userId);
-    console.log("Request body:", req.body);
-    console.log("File:", req.file ? req.file.filename : "No file");
     
     if (!req.file) {
       return res.status(400).json({
@@ -63,12 +58,55 @@ export const addProduct = async (req, res) => {
   }
 };
 
-// Get All Products Controller
-export const getAllProducts = async (req, res) => {
+// Get MY Products Controller 
+export const getMyProducts = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const result = await getAllProductsService(userId);
+    
+    const result = await getMyProductsService(userId);
+
+    if (result.status === "SUCCESS") {
+      return res.status(200).json({
+        status: result.status,
+        message: result.message,
+        data: result.data,
+        count: result.count
+      });
+    } else if (result.status === "FORBIDDEN") {
+      return res.status(403).json({
+        status: result.status,
+        message: result.message,
+        data: result.data
+      });
+    } else if (result.status === "NOT_FOUND") {
+      return res.status(404).json({
+        status: result.status,
+        message: result.message,
+        data: result.data
+      });
+    } else {
+      return res.status(400).json({
+        status: result.status,
+        message: result.message,
+        data: result.data
+      });
+    }
+
+  } catch (error) {
+    console.error("Get my products controller error:", error);
+    res.status(500).json({
+      status: "FAILED",
+      message: "Failed to retrieve your products",
+      data: null
+    });
+  }
+};
+
+// Get ALL Products Controller
+export const getAllProducts = async (req, res) => {
+  try {
+    const result = await getAllProductsService();
 
     if (result.status === "SUCCESS") {
       return res.status(200).json({
