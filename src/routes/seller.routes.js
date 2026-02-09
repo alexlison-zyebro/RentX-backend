@@ -10,6 +10,7 @@ import {
   getMyProducts
 } from "../controllers/product.controllers.js";
 import upload from "../config/multer.config.js";
+import { approveOrRejectRequest, getSellerRentRequests, updateRentRequestStatus } from "../controllers/rentRequest.controllers.js";
 
 const router = express.Router();
 
@@ -34,5 +35,10 @@ router.put(
   updateProduct
 );
 router.put("/toggle-availability/:id", toggleProductAvailability);
+
+// Rent Request Routes
+router.get("/requests", getSellerRentRequests);
+router.put("/approve-reject/:requestId", approveOrRejectRequest);
+router.put("/update-status/:requestId", updateRentRequestStatus);
 
 export default router;
