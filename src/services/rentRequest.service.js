@@ -168,7 +168,7 @@ export const getSellerRentRequestsService = async (sellerId) => {
       })
       .populate({
         path: "buyerId",
-        select: "email phone"
+        select: "email phone buyerName address"
       })
       .sort({ createdAt: -1 });
 
