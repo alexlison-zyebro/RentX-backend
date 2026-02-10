@@ -11,7 +11,7 @@ import {
 } from "../controllers/product.controllers.js";
 import upload from "../config/multer.config.js";
 import { approveOrRejectRequest, getSellerRentRequests, updateRentRequestStatus } from "../controllers/rentRequest.controllers.js";
-import { getSellerEarnings } from "../controllers/earnings.services.js";
+import { getSellerEarnings } from "../controllers/earnings.controllers.js";
 
 const router = express.Router();
 
