@@ -1,16 +1,14 @@
 import Product from "../models/Product.js";
 import RentRequest from "../models/RentRequest.js";
-import User from "../models/User.js";
 
 // Create Rent Request
 export const createRentRequestService = async (requestData) => {
   try {
     const { productId, buyerId, quantity, startDate, endDate } = requestData;
-
-    if (endDate <= startDate) {
+    if (endDate < startDate) {
       return {
         status: "FAILED",
-        message: "End date must be after start date"
+        message: "End date cannot be before start date"
       };
     }
 
@@ -43,6 +41,7 @@ export const createRentRequestService = async (requestData) => {
       };
     }
 
+    // Check if enough quantity is available
     if (quantity > product.remaining_quantity) {
       return {
         status: "FAILED",
@@ -69,6 +68,7 @@ export const createRentRequestService = async (requestData) => {
       };
     }
 
+    // Check availability for selected dates
     const activeRentRequests = await RentRequest.find({
       productId,
       status: { $in: ["PENDING", "ACCEPTED", "COLLECTED"] },
@@ -221,12 +221,13 @@ export const approveOrRejectRequestService = async (requestId, sellerId, action,
 
     // Update status
     rentRequest.status = action;
+    
     if (action === "ACCEPTED") {
       rentRequest.acceptedAt = new Date();
     }
+    
     if (action === "REJECTED") {
       rentRequest.rejectionReason = rejectionReason;
-      // Return quantity to product when rejected
       const product = await Product.findById(rentRequest.productId);
       if (product) {
         product.remaining_quantity += rentRequest.quantity;
@@ -282,13 +283,46 @@ export const updateRentRequestStatusService = async (requestId, userId, newStatu
       };
     }
 
+    // Check date validations based on status
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (newStatus === "COLLECTED") {
+      // Check if today is the start date
+      const startDate = new Date(rentRequest.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      
+      if (today < startDate) {
+        return {
+          status: "FAILED",
+          message: `Cannot mark as collected before the rental start date (${startDate.toDateString()})`
+        };
+      }
+    } 
+    
+    else if (newStatus === "COMPLETED") {
+      // Check if today is the end date
+      const endDate = new Date(rentRequest.endDate);
+      endDate.setHours(0, 0, 0, 0);
+      
+      if (today < endDate) {
+        return {
+          status: "FAILED",
+          message: `Cannot mark as completed before the rental end date (${endDate.toDateString()})`
+        };
+      }
+    }
+
     // Update status
     rentRequest.status = newStatus;
     
     if (newStatus === "COLLECTED") {
       rentRequest.collectedAt = new Date();
-    } else if (newStatus === "COMPLETED") {
+    } 
+    
+    else if (newStatus === "COMPLETED") {
       rentRequest.completedAt = new Date();
+      // Return quantity to product when rental is completed
       const product = await Product.findById(rentRequest.productId);
       if (product) {
         product.remaining_quantity += rentRequest.quantity;
