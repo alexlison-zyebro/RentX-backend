@@ -11,6 +11,7 @@ import {
 } from "../controllers/product.controllers.js";
 import upload from "../config/multer.config.js";
 import { approveOrRejectRequest, getSellerRentRequests, updateRentRequestStatus } from "../controllers/rentRequest.controllers.js";
+import { getSellerEarnings } from "../controllers/earnings.services.js";
 
 const router = express.Router();
 
@@ -40,5 +41,8 @@ router.put("/toggle-availability/:id", toggleProductAvailability);
 router.get("/requests", getSellerRentRequests);
 router.put("/approve-reject/:requestId", approveOrRejectRequest);
 router.put("/update-status/:requestId", updateRentRequestStatus);
+
+// Earnings Route 
+router.get("/earnings", getSellerEarnings);
 
 export default router;
