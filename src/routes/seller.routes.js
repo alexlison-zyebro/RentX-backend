@@ -1,6 +1,7 @@
 import express from "express";
 import { activateSubscription, checkSubscriptionStatus } from "../controllers/subscription.controllers.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { isSeller } from "../middlewares/seller.middleware.js";
 import {
   addProduct,
   getAllProducts,
@@ -12,10 +13,12 @@ import {
 import upload from "../config/multer.config.js";
 import { approveOrRejectRequest, getSellerRentRequests, updateRentRequestStatus } from "../controllers/rentRequest.controllers.js";
 import { getSellerEarnings } from "../controllers/earnings.controllers.js";
+import { updateSeller, viewSellerById } from "../controllers/seller.controllers.js";
 
 const router = express.Router();
 
 router.use(authenticate);
+router.use(isSeller);
 
 // Subscription routes 
 router.post("/subscription/activate", activateSubscription);
@@ -36,6 +39,11 @@ router.put(
   updateProduct
 );
 router.put("/toggle-availability/:id", toggleProductAvailability);
+
+// seller Account Routes
+router.get("/mydetails/:id", viewSellerById); 
+router.put("/updateDetails/:id", updateSeller); 
+
 
 // Rent Request Routes
 router.get("/requests", getSellerRentRequests);
