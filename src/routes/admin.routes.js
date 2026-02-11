@@ -2,8 +2,9 @@ import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { isAdmin } from "../middlewares/admin.middleware.js";
 import { approveSeller, getAllSellers, getPendingSellers, getSellerDetails, rejectSeller } from "../controllers/admin.controllers.js";
-import { addCategory, viewAllCategories, updateCategory, deleteCategory, toggleCategoryStatus } from '../controllers/category.controllers.js'
+import { addCategory, updateCategory, deleteCategory, toggleCategoryStatus } from '../controllers/category.controllers.js'
 import { toggleBuyerStatus, viewAllBuyers } from "../controllers/buyer.controllers.js";
+import { viewAllSellers } from "../controllers/seller.controllers.js";
 
 const router = express.Router();
 
@@ -16,6 +17,10 @@ router.post("/sellers/all",getAllSellers);
 router.post("/sellers/details",getSellerDetails);
 router.post("/sellers/approve",approveSeller);
 router.post("/sellers/reject",rejectSeller);
+
+// Seller Management
+router.get('/sellers/ListAll',viewAllSellers);
+router.put('/sellers/toggle-status/:id',toggleBuyerStatus);
 
 
 //buyer
