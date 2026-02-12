@@ -4,7 +4,8 @@ import {
   getProductByIdService,
   updateProductService,
   toggleProductAvailabilityService,
-  getMyProductsService
+  getMyProductsService,
+  searchProductsService
 } from "../services/product.service.js";
 
 // Add Product Controller
@@ -256,6 +257,58 @@ export const toggleProductAvailability = async (req, res) => {
     res.status(500).json({
       status: "FAILED",
       message: "Failed to toggle product availability",
+      data: null
+    });
+  }
+};
+
+// Search Products Controller
+export const searchProducts = async (req, res) => {
+  try {
+    const body = req.body || {};
+    
+    const {
+      name,
+      categoryId,
+      city,
+      state,
+      pincode,
+      street,
+      minPrice,
+      maxPrice
+    } = body;
+
+    const result = await searchProductsService({
+      name,
+      categoryId,
+      city,
+      state,
+      pincode,
+      street,
+      minPrice,
+      maxPrice
+    });
+
+    if (result.status === "SUCCESS") {
+      return res.status(200).json({
+        status: "SUCCESS",
+        message: result.message,
+        data: result.data,
+        count: result.count
+      });
+    } else {
+      return res.status(400).json({
+        status: result.status,
+        message: result.message,
+        data: result.data
+      });
+    }
+
+  } catch (error) {
+    console.error("Search products controller error:", error);
+    res.status(500).json({
+      status: "FAILED",
+      message: "Failed to search products: " + error.message,
       data: null
     });
   }
