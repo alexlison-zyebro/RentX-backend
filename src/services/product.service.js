@@ -175,12 +175,20 @@ export const getAllProductsService = async () => {
 // Get Single Product by ID
 export const getProductByIdService = async (productId, userId) => {
   try {
-    const myProduct = await Product.findOne({
+    const product = await Product.findOne({
       _id: productId,
       userId
-    }).populate("categoryId", "name");
+    })
+    .populate("categoryId", "name")
+    .populate({
+      path: "userId",
+      select: "email phone address sellerDetails role status",
+      populate: {
+        path: "sellerDetails"
+      }
+    });
 
-    if (!myProduct) {
+    if (!product) {
       return {
         status: "NOT_FOUND",
         message: "Product not found",
@@ -188,10 +196,58 @@ export const getProductByIdService = async (productId, userId) => {
       };
     }
 
+    const seller = product.userId || {};
+    const sellerDetails = seller.sellerDetails || {};
+    
+    let sellerName = "N/A";
+    if (sellerDetails.sellerType === "INDIVIDUAL") {
+      sellerName = sellerDetails.individualName || "N/A";
+    } else if (sellerDetails.sellerType === "ORGANIZATION") {
+      sellerName = sellerDetails.organizationName || "N/A";
+    }
+
+    const address = seller.address || {};
+    const fullAddress = [
+      address.street,
+      address.city,
+      address.state,
+      address.pincode
+    ].filter(Boolean).join(", ") || "N/A";
+
+    const productData = {
+      _id: product._id,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      pricePerDay: product.pricePerDay,
+      quantity: product.quantity,
+      remaining_quantity: product.remaining_quantity,
+      isAvailable: product.isAvailable,
+      category: product.categoryId?.name || "N/A",
+      createdAt: product.createdAt,
+      
+      seller: {
+        _id: seller._id,
+        name: sellerName,
+        email: seller.email || "N/A",
+        phone: seller.phone || "N/A",
+        sellerType: sellerDetails.sellerType || "N/A",
+        
+        street: address.street || "N/A",
+        city: address.city || "N/A",
+        state: address.state || "N/A",
+        pincode: address.pincode || "N/A",
+        fullAddress: fullAddress,
+        
+        isEmailVerified: seller.isEmailVerified || false,
+        status: seller.status || "N/A"
+      }
+    };
+
     return {
       status: "SUCCESS",
       message: "Product retrieved successfully",
-      data: myProduct
+      data: productData
     };
 
   } catch (error) {
@@ -331,6 +387,137 @@ export const toggleProductAvailabilityService = async (productId, userId) => {
     return {
       status: "FAILED",
       message: "Failed to toggle product availability",
+      data: null
+    };
+  }
+};
+
+
+// Search Product Service
+export const searchProductsService = async (filters = {}) => {
+  try {
+    const {
+      name,
+      categoryId,
+      city,
+      state,
+      pincode,
+      street,
+      minPrice,
+      maxPrice
+    } = filters;
+
+    let productQuery = { 
+      isAvailable: true,
+      remaining_quantity: { $gt: 0 }
+    };
+
+    if (name) {
+      productQuery.name = { $regex: name, $options: 'i' };
+    }
+
+    if (categoryId) {
+      productQuery.categoryId = categoryId;
+    }
+
+    if (minPrice || maxPrice) {
+      productQuery.pricePerDay = {};
+      if (minPrice) productQuery.pricePerDay.$gte = Number(minPrice);
+      if (maxPrice) productQuery.pricePerDay.$lte = Number(maxPrice);
+    }
+
+    let products = await Product.find(productQuery)
+      .populate('categoryId', 'name')
+      .lean();
+
+    if (products.length === 0) {
+      return {
+        status: "SUCCESS",
+        message: "No products found",
+        data: [],
+        count: 0
+      };
+    }
+
+    if (city || state || pincode || street) {
+      const sellerIds = products.map(p => p.userId.toString());
+      
+      let locationQuery = { 
+        _id: { $in: sellerIds },
+        role: "SELLER"
+      };
+      
+      if (city) locationQuery['address.city'] = { $regex: city, $options: 'i' };
+      if (state) locationQuery['address.state'] = { $regex: state, $options: 'i' };
+      if (pincode) locationQuery['address.pincode'] = pincode;
+      if (street) locationQuery['address.street'] = { $regex: street, $options: 'i' };
+
+      const matchingSellers = await User.find(locationQuery).distinct('_id');
+      const matchingSellerIds = matchingSellers.map(id => id.toString());
+
+      products = products.filter(p => matchingSellerIds.includes(p.userId.toString()));
+    }
+
+    const productIds = products.map(p => p._id);
+    
+    const finalProducts = await Product.find({ _id: { $in: productIds } })
+      .populate('categoryId', 'name')
+      .populate({
+        path: 'userId',
+        select: 'email phone address sellerDetails',
+        transform: (user) => {
+          if (!user) return null;
+          
+          let sellerName = "N/A";
+          if (user.sellerDetails) {
+            sellerName = user.sellerDetails.individualName || 
+                        user.sellerDetails.organizationName || 
+                        "N/A";
+          }
+
+          const address = user.address || {};
+          const location = [
+            address.city,
+            address.state,
+            address.pincode
+          ].filter(Boolean).join(", ") || "N/A";
+
+          return {
+            _id: user._id,
+            name: sellerName,
+            email: user.email,
+            phone: user.phone,
+            city: address.city || "N/A",
+            state: address.state || "N/A",
+            location: location
+          };
+        }
+      })
+      .lean();
+
+    const formattedProducts = finalProducts.map(product => ({
+      _id: product._id,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      pricePerDay: product.pricePerDay,
+      remaining_quantity: product.remaining_quantity,
+      category: product.categoryId?.name || "N/A",
+      seller: product.userId
+    }));
+
+    return {
+      status: "SUCCESS",
+      message: "Products found successfully",
+      data: formattedProducts,
+      count: formattedProducts.length
+    };
+
+  } catch (error) {
+    console.error("Search products service error:", error);
+    return {
+      status: "FAILED",
+      message: "Failed to search products: " + error.message,
       data: null
     };
   }
