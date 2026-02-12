@@ -1,5 +1,7 @@
 import Product from "../models/Product.js";
 import RentRequest from "../models/RentRequest.js";
+import { sendMail } from "../utils/mailer.js";
+
 
 // Create Rent Request
 export const createRentRequestService = async (requestData) => {
@@ -187,10 +189,24 @@ export const getSellerRentRequestsService = async (sellerId) => {
   }
 };
 
-// Approve or Reject Request
+
+// Approve or Reject Request - UPDATED WITH EMAIL
 export const approveOrRejectRequestService = async (requestId, sellerId, action, rejectionReason = null) => {
   try {
-    const rentRequest = await RentRequest.findById(requestId);
+    const rentRequest = await RentRequest.findById(requestId)
+      .populate({
+        path: "productId",
+        select: "name image pricePerDay description"
+      })
+      .populate({
+        path: "buyerId",
+        select: "email phone buyerDetails"
+      })
+      .populate({
+        path: "sellerId",
+        select: "email phone address sellerDetails"
+      });
+
     if (!rentRequest) {
       return {
         status: "NOT_FOUND",
@@ -198,7 +214,7 @@ export const approveOrRejectRequestService = async (requestId, sellerId, action,
       };
     }
 
-    if (rentRequest.sellerId.toString() !== sellerId) {
+    if (rentRequest.sellerId._id.toString() !== sellerId) {
       return {
         status: "FORBIDDEN",
         message: "Not authorized"
@@ -222,16 +238,198 @@ export const approveOrRejectRequestService = async (requestId, sellerId, action,
     // Update status
     rentRequest.status = action;
     
+    // === ACCEPTED EMAIL ===
     if (action === "ACCEPTED") {
       rentRequest.acceptedAt = new Date();
+      
+      try {
+        const buyer = rentRequest.buyerId;
+        const seller = rentRequest.sellerId;
+        const product = rentRequest.productId;
+        
+        // Format dates
+        const startDate = new Date(rentRequest.startDate).toLocaleDateString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        const endDate = new Date(rentRequest.endDate).toLocaleDateString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        
+        // Get seller info
+        let sellerName = "Seller";
+        let locationType = "";
+        let collectionAddress = "";
+        
+        if (seller.sellerDetails) {
+          if (seller.sellerDetails.sellerType === "INDIVIDUAL") {
+            sellerName = seller.sellerDetails.individualName || "Individual Seller";
+            locationType = "Home";
+          } else if (seller.sellerDetails.sellerType === "ORGANIZATION") {
+            sellerName = seller.sellerDetails.organizationName || "Organization";
+            locationType = "Shop";
+          }
+        }
+        
+        // Format address
+        const address = seller.address || {};
+        const fullAddress = [
+          address.street,
+          address.city,
+          address.state,
+          address.pincode
+        ].filter(Boolean).join(", ") || "Address not available";
+        
+        collectionAddress = address.street || fullAddress;
+        
+        // Email HTML
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #10b981; margin-bottom: 5px;">✅ Rent Request Accepted!</h1>
+              <p style="color: #4b5563;">Your rental request has been approved</p>
+            </div>
+            
+            <!-- Product Image & Name -->
+            <div style="display: flex; align-items: center; gap: 15px; background: #f9fafb; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+              ${product.image ? `
+                <img src="http://localhost:4000${product.image}" alt="${product.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+              ` : `
+                <div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                  📦
+                </div>
+              `}
+              <div>
+                <h2 style="margin: 0; color: #1f2937; font-size: 20px;">${product.name}</h2>
+                <p style="margin: 5px 0 0; color: #6b7280;">${product.description?.substring(0, 100)}...</p>
+              </div>
+            </div>
+            
+            <!-- Rental Details -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: #374151; border-bottom: 2px solid #f97316; padding-bottom: 8px;">📅 Rental Period</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0;"><strong>Start Date:</strong></td><td>${startDate} at 10:00 AM</td></tr>
+                <tr><td style="padding: 8px 0;"><strong>End Date:</strong></td><td>${endDate} at 10:00 AM</td></tr>
+                <tr><td style="padding: 8px 0;"><strong>Quantity:</strong></td><td>${rentRequest.quantity} item(s)</td></tr>
+                <tr><td style="padding: 8px 0;"><strong>Total Days:</strong></td><td>${rentRequest.totalDays} days</td></tr>
+              </table>
+            </div>
+            
+            <!-- Payment Summary -->
+            <div style="background: #fef2e8; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+              <h3 style="color: #374151; margin-top: 0;">💰 Payment Summary</h3>
+              <table style="width: 100%;">
+                <tr><td>Price per day:</td><td style="text-align: right;">₹${rentRequest.pricePerDay}</td></tr>
+                <tr><td style="padding-top: 10px;"><strong>Total Amount:</strong></td><td style="text-align: right; padding-top: 10px;"><strong style="font-size: 20px; color: #f97316;">₹${rentRequest.totalAmount}</strong></td></tr>
+              </table>
+            </div>
+            
+            <!-- Collection Info -->
+            <div style="background: #e6f7e6; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+              <h3 style="color: #374151; margin-top: 0;">📍 Collection Details</h3>
+              <p style="margin: 5px 0;"><strong>Collect from ${locationType}:</strong></p>
+              <p style="margin: 5px 0; font-size: 16px;"><strong>${sellerName}</strong></p>
+              <p style="margin: 5px 0; color: #4b5563;">${collectionAddress}</p>
+              <p style="margin: 5px 0; color: #4b5563;">${fullAddress}</p>
+              <p style="margin: 15px 0 0 0; font-weight: bold; color: #10b981;">⏰ Collection Time: ${startDate} at 10:00 AM</p>
+            </div>
+            
+            <!-- Seller Contact -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: #374151;">👤 Seller Contact</h3>
+              <p><strong>Name:</strong> ${sellerName}</p>
+              <p><strong>Email:</strong> ${seller.email || 'N/A'}</p>
+              <p><strong>Phone:</strong> ${seller.phone || 'N/A'}</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #f97316; font-size: 18px; font-weight: bold; margin: 0;">RentX</p>
+              <p style="color: #9ca3af; font-size: 12px;">Thank you for choosing RentX!</p>
+            </div>
+          </div>
+        `;
+        
+        await sendMail(
+          buyer.email,
+          "✅ Your Rent Request Has Been Accepted - RentX",
+          emailHtml
+        );
+      } catch (emailError) {
+        console.error("Failed to send acceptance email:", emailError);
+      }
     }
     
+    // === REJECTED EMAIL ===
     if (action === "REJECTED") {
       rentRequest.rejectionReason = rejectionReason;
+      
+      // Restore product quantity
       const product = await Product.findById(rentRequest.productId);
       if (product) {
         product.remaining_quantity += rentRequest.quantity;
         await product.save();
+      }
+      
+      try {
+        const buyer = rentRequest.buyerId;
+        const product = rentRequest.productId;
+        
+        // Format dates
+        const startDate = new Date(rentRequest.startDate).toLocaleDateString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        const endDate = new Date(rentRequest.endDate).toLocaleDateString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        
+        // Email HTML
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #ef4444; margin-bottom: 5px;"> Rent Request Rejected ❌</h1>
+              <p style="color: #4b5563;">Your rental request has been declined</p>
+            </div>
+            
+            <!-- Product Info -->
+            <div style="display: flex; align-items: center; gap: 15px; background: #f9fafb; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+              ${product.image ? `
+                <img src="http://localhost:4000${product.image}" alt="${product.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+              ` : `
+                <div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center;">📦</div>
+              `}
+              <div>
+                <h2 style="margin: 0; color: #1f2937; font-size: 20px;">${product.name}</h2>
+              </div>
+            </div>
+            
+            <!-- Rejection Reason -->
+            <div style="background: #fee2e2; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
+              <h3 style="color: #374151; margin-top: 0; margin-bottom: 10px;">📝 Reason for Rejection</h3>
+              <p style="margin: 0; font-size: 16px; color: #b91c1c; font-weight: 500;">"${rejectionReason}"</p>
+            </div>
+            
+            <!-- Requested Period -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: #374151;">📅 Requested Rental Period</h3>
+              <p><strong>Start Date:</strong> ${startDate}</p>
+              <p><strong>End Date:</strong> ${endDate}</p>
+              <p><strong>Quantity:</strong> ${rentRequest.quantity} item(s)</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280;">You can try renting other products or contact support for assistance.</p>
+              <p style="color: #f97316; font-size: 18px; font-weight: bold; margin-top: 15px;">RentX</p>
+            </div>
+          </div>
+        `;
+        
+        await sendMail(
+          buyer.email,
+          "❌ Your Rent Request Has Been Rejected - RentX",
+          emailHtml
+        );
+      } catch (emailError) {
+        console.error("Failed to send rejection email:", emailError);
       }
     }
 

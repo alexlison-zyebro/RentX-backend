@@ -9,8 +9,8 @@ const router = express.Router();
 
 router.use(authenticate);
 router.post("/allProducts", getAllProducts); 
-router.post("/productById/:id", getProductById); 
-router.post("/searchProduct/:id", searchProducts); 
+router.get("/productById/:id", getProductById); 
+router.post("/searchProduct", searchProducts); 
 router.post('/categories/all', viewAllCategories);
 router.post("/createRequest", createRentRequest);
 router.post("/my-requests", getBuyerRentRequests);

@@ -177,7 +177,6 @@ export const getProductByIdService = async (productId, userId) => {
   try {
     const product = await Product.findOne({
       _id: productId,
-      userId
     })
     .populate("categoryId", "name")
     .populate({
@@ -476,11 +475,6 @@ export const searchProductsService = async (filters = {}) => {
           }
 
           const address = user.address || {};
-          const location = [
-            address.city,
-            address.state,
-            address.pincode
-          ].filter(Boolean).join(", ") || "N/A";
 
           return {
             _id: user._id,
@@ -489,7 +483,9 @@ export const searchProductsService = async (filters = {}) => {
             phone: user.phone,
             city: address.city || "N/A",
             state: address.state || "N/A",
-            location: location
+            street: address.street || "N/A",
+            pincode: address.pincode || "N/A"
+
           };
         }
       })
