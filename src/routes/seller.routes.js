@@ -1,0 +1,56 @@
+import express from "express";
+import { activateSubscription, checkSubscriptionStatus } from "../controllers/subscription.controllers.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
+import { isSeller } from "../middlewares/seller.middleware.js";
+import {
+  addProduct,
+  getAllProducts,
+  getProductById,
+  updateProduct,
+  toggleProductAvailability,
+  getMyProducts
+} from "../controllers/product.controllers.js";
+import upload from "../config/multer.config.js";
+import { approveOrRejectRequest, getSellerRentRequests, updateRentRequestStatus } from "../controllers/rentRequest.controllers.js";
+import { getSellerEarnings } from "../controllers/earnings.controllers.js";
+import { updateSeller, viewSellerById } from "../controllers/seller.controllers.js";
+
+const router = express.Router();
+
+router.use(authenticate);
+router.use(isSeller);
+
+// Subscription routes 
+router.post("/subscription/activate", activateSubscription);
+router.post("/subscription/status", checkSubscriptionStatus);
+
+// Product routes
+router.post(
+  "/add-product",
+  upload.single("image"),
+  addProduct
+);
+router.post("/my-products", getMyProducts); 
+router.post("/allProducts", getAllProducts); 
+router.post("/products/:id", getProductById); 
+router.put(
+  "/updateProduct/:id",
+  upload.single("image"),
+  updateProduct
+);
+router.put("/toggle-availability/:id", toggleProductAvailability);
+
+// seller Account Routes
+router.get("/mydetails/:id", viewSellerById); 
+router.put("/updateDetails/:id", updateSeller); 
+
+
+// Rent Request Routes
+router.get("/requests", getSellerRentRequests);
+router.put("/approve-reject/:requestId", approveOrRejectRequest);
+router.put("/update-status/:requestId", updateRentRequestStatus);
+
+// Earnings Route 
+router.get("/earnings", getSellerEarnings);
+
+export default router;
